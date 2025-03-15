@@ -11,6 +11,7 @@ node_modules
 dist
 dist-ssr
 oldFiles
+media
 *.local
 
 # Editor directories and files

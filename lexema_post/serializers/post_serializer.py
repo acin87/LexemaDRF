@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from lexema_post.models import Post, PostImage
+from lexema_post.serializers.author_serializer import AuthorSerializer
 
 
 class PostImageSerializer(serializers.ModelSerializer):
@@ -17,6 +18,7 @@ class PostSerializer(serializers.ModelSerializer):
     """Сериализатор для модели Posts"""
 
     images = PostImageSerializer(many=True, read_only=True)
+    author = AuthorSerializer()
 
     class Meta:
         """Метаданные сериализатора"""

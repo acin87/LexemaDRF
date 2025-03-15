@@ -44,9 +44,6 @@ SIMPLE_JWT = {
     "USER_ID_FIELD": "id",
 }
 
-CORS_ALLOW_ALL_ORIGINS = True
-
-
 MEDIA_URL = "/media/"
 MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 # Application definition
@@ -57,6 +54,7 @@ INSTALLED_APPS = [
     "lexema_auth.apps.LexemaAuthConfig",
     "lexema_group.apps.LexemaGroupConfig",
     "lexema_post.apps.LexemaPostConfig",
+    "lexema_friends.apps.LexemaFriendsConfig",
     "django_filters",
     "corsheaders",
     "django.contrib.admin",
@@ -79,6 +77,30 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = "lexema_server.urls"
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+]
+CORS_ALLOW_METHODS = [
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
+]
+
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
 
 TEMPLATES = [
     {

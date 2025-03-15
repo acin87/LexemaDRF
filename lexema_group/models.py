@@ -18,3 +18,17 @@ class LexemaGroups(models.Model):
         db_table = "lexema_app_groups"
         verbose_name = "Группа"
         verbose_name_plural = "Группы"
+
+    def __str__(self) -> str:
+        return f"{self.name}"
+
+
+class GroupMembership(models.Model):
+    """Модель для участия в группе"""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="group_memberships")
+    group = models.ForeignKey(LexemaGroups, on_delete=models.CASCADE, related_name="members")
+    joined_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "lexema_app_group_memberships"
+        unique_together = ("user", "group")
