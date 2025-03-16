@@ -40,8 +40,7 @@ class PostViewSet(viewsets.ModelViewSet):
         post_serializer.is_valid(raise_exception=True)
         post = post_serializer.save()
 
-        for image_data in images_data:
-            PostImage.objects.create(post=post, image=image_data)
+        self.create_images(images_data, post)
         return Response(post_serializer.data, status=status.HTTP_201_CREATED)
 
     def update(self, request, *args, **kwargs):
@@ -96,9 +95,15 @@ class PostViewSet(viewsets.ModelViewSet):
 
             # Добавляем новые изображения, которые есть на фронте, но отсутствуют в базе
             new_images_data = request.FILES.getlist("new_images")
-            for image_data in new_images_data:
-                PostImage.objects.create(post=instance, image=image_data)
+
+            self.create_images(new_images_data, instance)
         updated_instance = self.get_object()
 
         serializer = self.get_serializer(updated_instance)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def create_images(self, images_data, post):
+
+        for image_data in images_data:
+            PostImage.objects.create(post=post, image=image_data)
+        return Response(status=status.HTTP_201_CREATED)

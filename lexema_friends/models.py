@@ -1,3 +1,7 @@
+import os
+import uuid
+
+from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 from django.utils import timezone
 from django.contrib.auth.models import User
@@ -44,3 +48,6 @@ class Friends(models.Model):
 
     def __str__(self):
         return f"{self.user} -> {self.friend} ({self.status})"
+
+
+

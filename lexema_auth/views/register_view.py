@@ -1,6 +1,7 @@
 from rest_framework import generics, permissions
 from rest_framework.response import Response
-from lexema_app.serializers.auth.Register_serializer import RegisterSerializer
+
+from lexema_auth.serializers import RegisterSerializer
 
 
 class RegisterView(generics.CreateAPIView):

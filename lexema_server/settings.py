@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     "lexema_group.apps.LexemaGroupConfig",
     "lexema_post.apps.LexemaPostConfig",
     "lexema_friends.apps.LexemaFriendsConfig",
+    "lexema_profile.apps.LexemaProfileConfig",
     "django_filters",
     "corsheaders",
     "django.contrib.admin",

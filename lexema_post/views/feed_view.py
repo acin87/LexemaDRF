@@ -16,24 +16,24 @@ class FeedView(APIView):
     def get(self, request):
         user = request.user
 
-        user_groups = GroupMembership.objects.filter(  # pylint: disable=no-member
+        user_groups = GroupMembership.objects.filter(
             user=user
         ).values_list("group", flat=True)
-        group_posts = Post.objects.filter(  # pylint: disable=no-member
+        group_posts = Post.objects.filter(
             group__in=user_groups
         ).order_by("-created_at")[:10]
 
-        friends = Friends.objects.filter(  # pylint: disable=no-member
+        friends = Friends.objects.filter(
             user=user, status="accepted"
         ).values_list("friend", flat=True)
 
         latest_posts = (
-            Post.objects.filter(author=OuterRef("author"))  # pylint: disable=no-member
+            Post.objects.filter(author=OuterRef("author"))
             .order_by("-created_at")
             .values("id")[:10]
         )
 
-        friends_posts = Post.objects.filter(  # pylint: disable=no-member
+        friends_posts = Post.objects.filter(
             id__in=Subquery(latest_posts), author__in=friends
         ).order_by("-created_at")
 

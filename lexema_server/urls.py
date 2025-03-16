@@ -23,6 +23,7 @@ from django.urls import path, include
 urlpatterns = [
     path("api/", include("lexema_auth.urls")),
     path("api/", include("lexema_post.urls")),
+    path("api/", include("lexema_friends.urls")),
     path("admin/", admin.site.urls),
 ]
 
