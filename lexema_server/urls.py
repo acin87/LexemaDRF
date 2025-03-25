@@ -24,6 +24,9 @@ urlpatterns = [
     path("api/", include("lexema_auth.urls")),
     path("api/", include("lexema_post.urls")),
     path("api/", include("lexema_friends.urls")),
+    path("api/", include("lexema_profile.urls")),
+    path("api/", include("lexema_user.urls")),
+    path("api/", include("lexema_comment.urls")),
     path("admin/", admin.site.urls),
 ]
 

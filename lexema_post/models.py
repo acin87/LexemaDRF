@@ -1,9 +1,11 @@
 """Модуль для импорта моделей"""
 
 import os
+import textwrap
 import uuid
 from django.db import models
 from django.contrib.auth.models import User
+from django.conf import settings
 
 from lexema_group.models import LexemaGroups
 
@@ -14,7 +16,7 @@ class Post(models.Model):
     id = models.AutoField(primary_key=True)
     content = models.TextField()
     author = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name="user_posts"
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="user_posts"
     )
     group = models.ForeignKey(
         LexemaGroups,
@@ -34,11 +36,19 @@ class Post(models.Model):
     likes = models.IntegerField(default=0)
     dislikes = models.IntegerField(default=0)
     views = models.IntegerField(default=0)
-    comments = models.IntegerField(default=0)
+    comments_count = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
 
+
+    def short_content(self):
+        """
+        Возвращает короткий текст поста.
+        """
+
+        return textwrap.shorten(self.content, width=100, placeholder="...")
+
     def __str__(self):
-        return f"{self.author.pk} - {self.author} / {self.group} - {self.content}"  # pylint: disable=no-member
+        return f"{self.id} - {self.author} / {self.group} - {self.short_content()}"  # pylint: disable=no-member
 
     class Meta:
         """Метаданные модели поста"""

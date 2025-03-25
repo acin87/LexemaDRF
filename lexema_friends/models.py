@@ -1,10 +1,8 @@
-import os
-import uuid
-
-from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 from django.utils import timezone
 from django.contrib.auth.models import User
+
+from lexema_server import settings
 
 
 class Friends(models.Model):
@@ -16,12 +14,12 @@ class Friends(models.Model):
         ("rejected", "Отклонено"),
     ]
     user = models.ForeignKey(
-        User,
+        settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="friends_sent",
     )
     friend = models.ForeignKey(
-        User,
+        settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="friends_received"
     )

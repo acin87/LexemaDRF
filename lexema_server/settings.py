@@ -51,11 +51,13 @@ MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 INSTALLED_APPS = [
     "rest_framework",
     "rest_framework_simplejwt",
+    'lexema_user.apps.LexemaUserConfig',
     "lexema_auth.apps.LexemaAuthConfig",
     "lexema_group.apps.LexemaGroupConfig",
     "lexema_post.apps.LexemaPostConfig",
     "lexema_friends.apps.LexemaFriendsConfig",
     "lexema_profile.apps.LexemaProfileConfig",
+    "lexema_comment.apps.LexemaCommentConfig",
     "django_filters",
     "corsheaders",
     "django.contrib.admin",
@@ -154,6 +156,8 @@ AUTH_PASSWORD_VALIDATORS = [
         "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
     },
 ]
+
+AUTH_USER_MODEL = "lexema_user.User"
 
 
 # Internationalization

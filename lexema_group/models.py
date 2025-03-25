@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 from django.contrib.auth.models import User
 
@@ -8,7 +9,7 @@ class LexemaGroups(models.Model):
     id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=255)
     description = models.TextField(null=True, blank=True)
-    owner = models.ForeignKey(User, on_delete=models.CASCADE)
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     cover_image_url = models.TextField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -25,7 +26,7 @@ class LexemaGroups(models.Model):
 
 class GroupMembership(models.Model):
     """Модель для участия в группе"""
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="group_memberships")
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="group_memberships")
     group = models.ForeignKey(LexemaGroups, on_delete=models.CASCADE, related_name="members")
     joined_at = models.DateTimeField(auto_now_add=True)
 

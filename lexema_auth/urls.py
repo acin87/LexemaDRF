@@ -1,8 +1,6 @@
 from django.urls import path
 from rest_framework_simplejwt.views import TokenRefreshView
-from lexema_auth.views import RegisterView
-from lexema_auth.views.custom_token_obtain_pair_view import CustomTokenObtainPairView
-
+from lexema_auth.views import RegisterView, CustomTokenObtainPairView
 
 urlpatterns = [
     path("auth/register/", RegisterView.as_view(), name="register"),
