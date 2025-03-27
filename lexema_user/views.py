@@ -1,11 +1,12 @@
-from rest_framework import status
+from django.db.models import Q
+from rest_framework import status, generics
 from rest_framework.generics import RetrieveAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from lexema_user.models import User
-from lexema_user.serializers import UserSerializerWithAvatar
+from lexema_user.serializers import UserSerializerWithAvatar, UserAutocompleteSerializer
 
 
 # Create your views here.
@@ -29,4 +30,31 @@ class UserById(RetrieveAPIView):
         return self.queryset.get(id=self.kwargs['pk'])
 
 
+# views.py
+class UserAutocompleteView(generics.ListAPIView):
+    serializer_class = UserAutocompleteSerializer
 
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['request'] = self.request
+        return context
+
+    def get_queryset(self):
+        query = self.request.query_params.get('q', '').strip()
+        if not query or len(query) < 2:
+            return User.objects.none()
+
+        # Разбиваем запрос на слова
+        terms = query.split()
+        q_objects = Q()
+
+        # Для каждого слова ищем в имени и фамилии
+        for term in terms:
+            q_objects &= (
+                    Q(first_name__istartswith=term) |
+                    Q(last_name__istartswith=term) |
+                    Q(first_name__icontains=term) |
+                    Q(last_name__icontains=term)
+            )
+
+        return User.objects.filter(q_objects).order_by('first_name', 'last_name')[:10]

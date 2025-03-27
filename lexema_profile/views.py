@@ -23,5 +23,5 @@ class ProfileViewSet(viewsets.ModelViewSet):
         if instance:
             serializer = self.get_serializer(instance)
             return Response(serializer.data, status=status.HTTP_200_OK)
-        return Response({"detail": f"Профиль с таким id-{request.user.pk} не найден."}, status=status.HTTP_404_NOT_FOUND)
+        return Response({"detail": f"Профиль с id-{request.user.pk} не найден."}, status=status.HTTP_404_NOT_FOUND)
 

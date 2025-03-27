@@ -1,7 +1,7 @@
 from django.db.models import OuterRef, Subquery
 from django.db import transaction
 
-from rest_framework import viewsets, status
+from rest_framework import viewsets, status, generics
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, BasePermission
@@ -72,13 +72,13 @@ class MainFeedView(APIView):
 class PostViewSet(viewsets.ModelViewSet):
     """Модель для списка постов"""
 
-    permission_classes = [IsAuthenticated, IsAuthorOrReadOnly]
+    permission_classes = [IsAuthenticated]
     serializer_class = PostSerializer
     pagination_class = LimitOffsetPagination
 
 
     def get_serializer_class(self):
-        if self.action in ["create", "update", "partial_update"]:
+        if self.action in ["create", "update"]:
             return PostCreateSerializer
         return PostSerializer
 
@@ -126,10 +126,17 @@ class PostViewSet(viewsets.ModelViewSet):
 
     def partial_update(self, request, *args, **kwargs):
         instance = self.get_object()
+
         if instance.author != request.user and request.data.get("views") is not None:
             with transaction.atomic():
                 instance.views += 1
                 instance.save(update_fields=["views"])
+                return Response(status=status.HTTP_200_OK)
+
+        if instance.author != request.user and request.data.get("likes") is not None:
+            with transaction.atomic():
+                instance.likes += 1
+                instance.save(update_fields=["likes"])
                 return Response(status=status.HTTP_200_OK)
 
         post_serializer = self.get_serializer(instance, data=request.data, partial=True)
@@ -175,3 +182,18 @@ class PostViewSet(viewsets.ModelViewSet):
         for image_data in images_data:
             PostImage.objects.create(post=post, image=image_data)
         return Response(status=status.HTTP_201_CREATED)
+
+
+class RepostRetrieveView(generics.RetrieveAPIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        post_id = kwargs.get("post_id")
+        try:
+            post = Post.objects.get(id=post_id)
+        except Post.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+        
+        serializer = PostSerializer(post)
+        return Response(serializer.data, status=status.HTTP_200_OK)

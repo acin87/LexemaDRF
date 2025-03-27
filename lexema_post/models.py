@@ -14,7 +14,7 @@ class Post(models.Model):
     """Модель поста"""
 
     id = models.AutoField(primary_key=True)
-    content = models.TextField()
+    content = models.TextField(null=True, blank=True)
     author = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="user_posts"
     )
@@ -44,7 +44,8 @@ class Post(models.Model):
         """
         Возвращает короткий текст поста.
         """
-
+        if self.content is None:
+            return f"Репост поста"
         return textwrap.shorten(self.content, width=100, placeholder="...")
 
     def __str__(self):

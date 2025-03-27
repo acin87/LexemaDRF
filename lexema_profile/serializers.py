@@ -60,6 +60,8 @@ class ProfileSerializer(serializers.ModelSerializer):
             "friends_count",
             "posts_count",
             "groups_count",
+            "birth_date",
+            "signature"
         ]
 
     def get_friends_count(self, obj):

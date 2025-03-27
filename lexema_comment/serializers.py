@@ -1,9 +1,15 @@
 from rest_framework import serializers
 from rest_framework.pagination import LimitOffsetPagination
 
-from lexema_comment.models import Comments
+from lexema_comment.models import Comments, CommentImages
 from lexema_user.serializers import UserSerializerWithAvatar
 
+
+class CommentImagesSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CommentImages
+        fields = ["image"]
+        extra_args = {"image": {"required": False}}
 
 class CommentsSerializer(serializers.ModelSerializer):
 
@@ -20,6 +26,7 @@ class RecursiveRootCommentSerializer(serializers.ModelSerializer):
     Рекурсивно выводит только один уровень дочерних комментариев.
     """
     user = UserSerializerWithAvatar(source="author", read_only=True)
+    images = CommentImagesSerializer(many=True, read_only=True)
     replies = serializers.SerializerMethodField()
     child_count = serializers.SerializerMethodField()
 
@@ -31,6 +38,7 @@ class RecursiveRootCommentSerializer(serializers.ModelSerializer):
             'parent_id',
             'user',
             'likes',
+            'images',
             'post_id',
             'created_at',
             'updated_at',
@@ -64,6 +72,7 @@ class RecursiveChildCommentsSerializer(serializers.ModelSerializer):
     Рекурсивно выводит все дочерние комментарии.
     """
     user = UserSerializerWithAvatar(source="author", read_only=True)
+    images = CommentImagesSerializer(many=True, read_only=True)
     replies = serializers.SerializerMethodField()
     child_count = serializers.SerializerMethodField()
 
@@ -75,6 +84,7 @@ class RecursiveChildCommentsSerializer(serializers.ModelSerializer):
             'parent_id',
             'user',
             'likes',
+            'images',
             'post_id',
             'created_at',
             'updated_at',

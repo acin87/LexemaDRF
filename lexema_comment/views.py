@@ -65,6 +65,20 @@ class CommentViewSet(viewsets.ModelViewSet):
         self.create_image(images_data, serializer.instance)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
+    def partial_update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        if "new_images" in request.data:
+            new_images_data = request.FILES.getlist("new_images")
+            self.create_image(new_images_data, instance)
+
+        updated_instance = self.get_object()
+
+        serializer = self.get_serializer(updated_instance)
+        return Response(serializer.data)
+
     @staticmethod
     def create_image(images_data, comment):
         for image_data in images_data:

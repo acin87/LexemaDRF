@@ -2,6 +2,7 @@ from django.contrib.auth import get_user_model
 from rest_framework import serializers
 from lexema_post.models import Post, PostImage
 from lexema_profile.models import ProfileImages
+from lexema_profile.serializers import ProfileSerializer
 
 User = get_user_model()
 
@@ -50,6 +51,8 @@ class PostSerializer(serializers.ModelSerializer):
     images = PostImageSerializer(many=True, read_only=True)
     author = AuthorSerializer()
     reposts = serializers.SerializerMethodField()
+    comments_count = serializers.SerializerMethodField()
+    signature = serializers.SerializerMethodField()
 
     class Meta:
         """Метаданные сериализатора"""
@@ -68,12 +71,21 @@ class PostSerializer(serializers.ModelSerializer):
             "comments_count",
             "created_at",
             "images",
-            "reposts"
+            "reposts",
+            "signature",
         ]
 
     @staticmethod
     def get_reposts(obj):
         return Post.objects.filter(original_post=obj).count()
+
+    @staticmethod
+    def get_comments_count(obj):
+        return obj.comments.count()
+
+    @staticmethod
+    def get_signature(obj):
+        return obj.author.profile.signature
 
 
 class PostCreateSerializer(serializers.ModelSerializer):

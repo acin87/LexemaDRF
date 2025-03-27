@@ -39,6 +39,7 @@ class Profile(models.Model):
     gender = models.CharField(
         max_length=50, choices=gender_choices, blank=True, null=True
     )
+    signature = models.TextField(blank=True, null=True)
     phone = models.CharField(max_length=50, blank=True, null=True)
     birth_date = models.DateField(blank=True, null=True)
     address = models.JSONField(blank=True, null=True)

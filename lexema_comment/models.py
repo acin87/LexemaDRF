@@ -1,4 +1,5 @@
 import os
+import textwrap
 import uuid
 
 from django.db import models
@@ -38,7 +39,7 @@ class CommentImages(models.Model):
     image = models.ImageField(upload_to=comment_image_upload_to, blank=True)
 
     def __str__(self):
-        return f"{self.comment.id} - {self.comment.post_id} --- {self.comment.content}"
+        return f"{self.comment.id} - {self.comment.post_id} --- {textwrap.shorten(self.comment.content, width=100, placeholder="...")}"
 
     class Meta:
         db_table = 'lexema_app_comment_images'
