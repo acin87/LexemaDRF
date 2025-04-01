@@ -60,7 +60,7 @@ class Profile(models.Model):
 class ProfileImages(models.Model):
     """Модель изображений профиля"""
 
-    profile = models.ForeignKey(
+    profile = models.OneToOneField(
         Profile, on_delete=models.CASCADE, related_name="images"
     )
     avatar_image = models.ImageField(

@@ -1,3 +1,4 @@
+from django.utils.translation import gettext_lazy as _
 from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -36,6 +37,6 @@ class RegisterView(generics.CreateAPIView):
                 "user": RegisterSerializer(
                     user, context=self.get_serializer_context()
                 ).data,
-                "message": "Пользователь успешно создан.",
+                "message": _("Пользователь успешно создан."),
             }
         )

@@ -6,4 +6,4 @@ class LexemaPostConfig(AppConfig):
     name = "lexema_post"
 
     def ready(self):
-        import lexema_post.signals # pylint: disable=unused-import,import-outside-toplevel
+        import lexema_post.signals

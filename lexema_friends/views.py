@@ -1,11 +1,15 @@
 from datetime import datetime, timedelta
 
-from rest_framework import status
+from django.db.models import Q
+from django.utils.translation import gettext_lazy as _
+from django_filters.rest_framework.backends import DjangoFilterBackend
+from rest_framework import status, viewsets, mixins
+from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-
 from lexema_friends.models import Friends
 from lexema_friends.serializers import (
     FriendsSerializer,
@@ -14,27 +18,126 @@ from lexema_friends.serializers import (
 
 
 # Create your views here.
-class FriendsView(APIView):
+class FriendsViewSet(
+    mixins.ListModelMixin,
+    mixins.CreateModelMixin,
+    viewsets.GenericViewSet,
+):
     permission_classes = [IsAuthenticated]
     queryset = Friends.objects.all()
+
     serializer_class = FriendsSerializer
     pagination_class = LimitOffsetPagination
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ["status"]
 
-    def get(self, request):
-        user = request.user
-
-        friends = Friends.objects.filter(user=user, status="accepted").select_related(
-            "friend__profile"
+    def get_queryset(self):
+        return self.queryset.filter(
+            Q(user=self.request.user) | Q(friend=self.request.user)
         )
-        paginator = self.pagination_class()
 
-        paginator_friends = paginator.paginate_queryset(friends, request)
+    def list(self, request, *args, **kwargs):
+        user = request.user
+        friends = Friends.objects.filter(user=user, status="accepted").select_related(
+            "friend__profile__images"
+        )
+        serializer = FriendsSerializer(friends, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
-        serializer = FriendsSerializer(paginator_friends, many=True)
+    def create(self, request, *args, **kwargs):
+        user = request.user
+        friend = request.data["friend_id"]
+        if user == friend:
+            raise ValidationError(_("Нельзя добавить себя в друзья"))
+        if Friends.objects.filter(user=user, friend_id=friend).exists():
+            raise ValidationError(_("Заявка уже отправлена"))
+        Friends.objects.create(user=user, friend_id=friend, status="pending")
+        return Response(status=status.HTTP_201_CREATED)
 
-        response = paginator.get_paginated_response(serializer.data)
+    @action(detail=True, methods=["patch"])
+    def update_status(self, request, pk=None):
+        try:
+            friendship = self.get_object()
+            new_status = request.data.get("status")
 
-        return Response(response.data, status=status.HTTP_200_OK)
+            # Проверяем, что текущий пользователь - получатель запроса
+            if friendship.friend != request.user:
+                return Response(
+                    {"error": _("Вы можете отвечать только на свои запросы")},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+
+            # Обновляем статус
+            friendship.update_status(new_status)
+            return Response(FriendsSerializer(friendship).data)
+
+        except Friends.DoesNotExist:
+            return Response(
+                {"error": _("Запрос на дружбу не найден")},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=["delete"])
+    def remove_friend(self, request, pk=None):
+        try:
+            friendship = self.get_object()
+
+            # Проверяем, что пользователь участвует в дружбе
+            if request.user not in [friendship.user, friendship.friend]:
+                return Response(
+                    {"error": _("Вы не можете удалить эту дружбу")},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+
+            friendship.remove_friendship(initiator=request.user)
+            return Response(status=status.HTTP_204_NO_CONTENT)
+
+        except Friends.DoesNotExist:
+            return Response(
+                {"error": _("Запись о дружбе не найдена")},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=["delete"])
+    def cancel_request(self, request, pk=None):
+        """Отмена запроса на дружбу (для отправителя). Удаление из друзей (для обеих сторон)"""
+        try:
+            friendship = Friends.objects.get(
+                Q(id=pk) & (Q(user=request.user) | Q(friend=request.user))
+            )
+            print(friendship)
+            # Если пользователь - отправитель запроса (может отменить pending)
+            if (
+                friendship.user == request.user
+                and friendship.status == Friends.Status.PENDING
+            ):
+                friendship.delete()
+                return Response(status=status.HTTP_204_NO_CONTENT)
+
+            # Если пользователь - получатель (может удалить запрос, даже если accepted)
+            elif friendship.friend == request.user:
+                friendship.delete()
+                return Response(status=status.HTTP_204_NO_CONTENT)
+
+            else:
+                return Response(
+                    {
+                        "error": _(
+                            "Вы можете отменить только свои запросы в статусе 'pending'"
+                        )
+                    },
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+
+        except Friends.DoesNotExist:
+            return Response(
+                {"error": _("Запись о дружбе не найдена или у вас нет прав")},
+                status=status.HTTP_404_NOT_FOUND,
+            )
 
 
 class UpcomingBirthDayFriendsView(APIView):

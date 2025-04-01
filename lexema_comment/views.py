@@ -1,4 +1,4 @@
-from django.shortcuts import render
+from django.utils.translation import gettext_lazy as _
 from rest_framework import viewsets, status, generics
 from rest_framework.generics import ListAPIView
 from rest_framework.pagination import LimitOffsetPagination
@@ -26,7 +26,6 @@ class RootCommentsView(ListAPIView):
 class ChildCommentsView(generics.GenericAPIView):
     serializer_class = RecursiveChildCommentsSerializer
     permission_classes = [IsAuthenticated]
-    pagination_class = LimitOffsetPagination
 
 
     def get(self, request, post_id, parent_id):
@@ -34,7 +33,7 @@ class ChildCommentsView(generics.GenericAPIView):
         try:
             root_comment = Comments.objects.get(id=parent_id, post_id=post_id)
         except Comments.DoesNotExist:
-            return Response({"error": "Root comment not found."}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"error": _("Корневой комментарий не найден")}, status=status.HTTP_404_NOT_FOUND)
 
         child_comments = root_comment.replies.all()
 

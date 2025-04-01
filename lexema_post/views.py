@@ -1,3 +1,5 @@
+from lib2to3.fixes.fix_input import context
+
 from django.db.models import OuterRef, Subquery
 from django.db import transaction
 
@@ -10,7 +12,7 @@ from rest_framework.pagination import LimitOffsetPagination
 
 from lexema_friends.models import Friends
 from lexema_group.models import GroupMembership
-from lexema_post.models import Post, PostImage
+from lexema_post.models import Post, PostImage, PostLike
 from lexema_post.serializers import PostSerializer, PostCreateSerializer
 
 
@@ -24,6 +26,7 @@ class IsAuthorOrReadOnly(BasePermission):
         return obj.author == request.user
 
 class MainFeedView(APIView):
+    """Вью для главной ленты"""
     permission_classes = [IsAuthenticated]
     pagination_class = LimitOffsetPagination
 
@@ -35,7 +38,7 @@ class MainFeedView(APIView):
         )
         group_posts = Post.objects.filter(group__in=user_groups).order_by(
             "-created_at"
-        )[:10]
+        )[:10]# не забыть изменить на 1
 
         friends = Friends.objects.filter(user=user, status="accepted").values_list(
             "friend", flat=True
@@ -44,7 +47,7 @@ class MainFeedView(APIView):
         latest_posts = (
             Post.objects.filter(author=OuterRef("author"))
             .order_by("-created_at")
-            .values("id")[:10]
+            .values("id")[:10] # не забыть изменить на 1
         )
 
         friends_posts = Post.objects.filter(
@@ -59,7 +62,7 @@ class MainFeedView(APIView):
         paginator = self.pagination_class()
         paginated_posts = paginator.paginate_queryset(posts, request)
 
-        serializer = PostSerializer(paginated_posts, many=True)
+        serializer = PostSerializer(paginated_posts, many=True, context={"request": request})
 
         response = paginator.get_paginated_response(serializer.data)
 
@@ -70,7 +73,7 @@ class MainFeedView(APIView):
 
 
 class PostViewSet(viewsets.ModelViewSet):
-    """Модель для списка постов"""
+    """Вью для списка постов"""
 
     permission_classes = [IsAuthenticated]
     serializer_class = PostSerializer
@@ -83,108 +86,144 @@ class PostViewSet(viewsets.ModelViewSet):
         return PostSerializer
 
 
+    def get_serializer_context(self):
+        """Добавляем request в контекст сериализатора"""
+        context = super().get_serializer_context()
+        context.update({"request": self.request})
+        return context
+
+
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
 
-
     def get_queryset(self):
-        user_id = self.kwargs.get('user_id') # profile/(?P<user_id>\d+)/posts
-        group_id = self.kwargs.get('group_id') # group/(?P<group_id>\d+)/posts
-        friend_id = self.kwargs.get('friend_id') # friend/(?P<friend_id>\d+)/posts
-        if self.request.user.is_staff:
-            return Post.objects.all().order_by("-created_at")
-        elif user_id:
-            return Post.objects.filter(author_id=user_id).order_by('-created_at')
+        queryset = Post.objects.all().order_by("-created_at")
+
+        # Оптимизация запросов
+        queryset = queryset.select_related('author', 'group', 'original_post')
+        queryset = queryset.prefetch_related('images', 'likes')
+
+        # Фильтрация по параметрам
+        user_id = self.kwargs.get('user_id')
+        group_id = self.kwargs.get('group_id')
+        friend_id = self.kwargs.get('friend_id')
+
+        if user_id:
+            return queryset.filter(author_id=user_id)
         elif group_id:
-            return Post.objects.filter(group_id=group_id).order_by('-created_at')
+            return queryset.filter(group_id=group_id)
         elif friend_id:
-            return Post.objects.filter(author_id=friend_id).order_by('-created_at')
-        return Post.objects.none()
+            return queryset.filter(author_id=friend_id)
+
+        return queryset if self.request.user.is_staff else Post.objects.none()
 
 
+    @transaction.atomic
     def create(self, request, *args, **kwargs):
-        post_data = request.data
-        images_data = request.FILES.getlist("images")
-
-        post_serializer = self.get_serializer(data=post_data)
+        post_serializer = self.get_serializer(data=request.data)
         post_serializer.is_valid(raise_exception=True)
-
         self.perform_create(post_serializer)
-        self.create_images(images_data, post_serializer.instance)
+
+        images_data = request.FILES.getlist("images")
+        self._handle_images(images_data, post_serializer.instance)
 
         return Response(post_serializer.data, status=status.HTTP_201_CREATED)
 
-
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
+        if instance.author != request.user:
+            return Response(
+                {"detail": "У вас нет прав на удаление этого поста"},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        instance.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
-        if instance.author != request.user and not request.user.is_staff:
-            raise PermissionDenied("У вас нет прав на выполнение данной операции.")
-
-        return super().destroy(request, *args, **kwargs)
-
-
+    @transaction.atomic
     def partial_update(self, request, *args, **kwargs):
         instance = self.get_object()
 
-        if instance.author != request.user and request.data.get("views") is not None:
-            with transaction.atomic():
-                instance.views += 1
-                instance.save(update_fields=["views"])
-                return Response(status=status.HTTP_200_OK)
+        # Обработка просмотров
+        if 'views' in request.data and instance.author != request.user:
+            instance.views += 1
+            instance.save(update_fields=["views"])
+            return Response(status=status.HTTP_200_OK)
 
-        if instance.author != request.user and request.data.get("likes") is not None:
-            with transaction.atomic():
-                instance.likes += 1
-                instance.save(update_fields=["likes"])
-                return Response(status=status.HTTP_200_OK)
+        # Обработка лайков
+        if 'like_action' in request.data:
+            return self._handle_like_action(instance, request.data['like_action'])
 
-        post_serializer = self.get_serializer(instance, data=request.data, partial=True)
+        # Обновление поста
+        serializer = self.get_serializer(
+            instance,
+            data=request.data,
+            partial=True,
+        )
 
-        post_serializer.is_valid(raise_exception=True)
 
-        self.perform_update(post_serializer)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
 
-        if "new_images" in request.data:
-            current_images = instance.images.all()
+        # Обработка изображений
+        if 'new_images' in request.data:
+            self._handle_images_update(instance, request)
 
-            # Получаем изображения, пришедшие с фронта
-            frontend_images = request.data["new_images"]
-
-            if "image" in frontend_images:
-                print(frontend_images)
-                frontend_image_urls = {
-                    img["image"] for img in frontend_images if img["image"]
-                }
-
-                # Удаляем изображения, которые есть в базе, но отсутствуют на фронте
-                images_to_delete = [
-                    img
-                    for img in current_images
-                    if img.image.url not in frontend_image_urls
-                ]
-                PostImage.objects.filter(
-                    id__in=[img.id for img in images_to_delete]
-                ).delete()
-
-            new_images_data = request.FILES.getlist("new_images")
-
-            self.create_images(new_images_data, instance)
-        updated_instance = self.get_object()
-
-        serializer = self.get_serializer(updated_instance)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+    def _handle_like_action(self, post, action):
+        """Обработка действий с лайками"""
+        user = self.request.user
+
+        if user == post.author:
+            return Response({"detail": "Вы не можете лайкать свои собственные посты"}, status=status.HTTP_403_FORBIDDEN)
+
+        with transaction.atomic():
+            like, created = PostLike.objects.get_or_create(
+                user=user,
+                post=post,
+                defaults={'reaction_type': action}
+            )
+
+            if not created:
+                if like.reaction_type == action:
+                    like.delete()  # Удаляем если повторный клик
+                else:
+                    like.reaction_type = action
+                    like.save()
+
+        return Response(status=status.HTTP_200_OK)
 
     @staticmethod
-    def create_images(images_data, post):
-
+    def _handle_images(images_data, post):
+        """Создание новых изображений"""
         for image_data in images_data:
             PostImage.objects.create(post=post, image=image_data)
-        return Response(status=status.HTTP_201_CREATED)
+
+
+    def _handle_images_update(self, post, request):
+        """Обновление изображений поста"""
+        current_images = post.images.all()
+        frontend_images = request.data["new_images"]
+
+        # Удаление изображений
+        if isinstance(frontend_images, list):
+            frontend_image_urls = {
+                img["image"] for img in frontend_images if "image" in img
+            }
+            images_to_delete = [
+                img for img in current_images
+                if img.image.url not in frontend_image_urls
+            ]
+            PostImage.objects.filter(id__in=[img.id for img in images_to_delete]).delete()
+
+        # Добавление новых изображений
+        new_images_data = request.FILES.getlist("new_images")
+        self._handle_images(new_images_data, post)
+
 
 
 class RepostRetrieveView(generics.RetrieveAPIView):
+    """Метод для получения репоста поста"""
     permission_classes = [IsAuthenticated]
 
     def get(self, request, *args, **kwargs):
@@ -195,5 +234,5 @@ class RepostRetrieveView(generics.RetrieveAPIView):
             return Response(status=status.HTTP_404_NOT_FOUND)
 
         
-        serializer = PostSerializer(post)
+        serializer = PostSerializer(post, context={"request": request})
         return Response(serializer.data, status=status.HTTP_200_OK)

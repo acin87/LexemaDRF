@@ -17,6 +17,9 @@ from pathlib import Path
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+if os.name == 'nt':  # Windows
+    GETTEXT_PATH = r'C:\Program Files\gettext-iconv\bin'
+    os.environ['PATH'] = GETTEXT_PATH + ';' + os.environ['PATH']
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
@@ -58,8 +61,11 @@ INSTALLED_APPS = [
     "lexema_friends.apps.LexemaFriendsConfig",
     "lexema_profile.apps.LexemaProfileConfig",
     "lexema_comment.apps.LexemaCommentConfig",
+    "lexema_notification.apps.LexemaNotificationConfig",
+    "lexema_message.apps.LexemaMessageConfig",
     "django_filters",
     "corsheaders",
+    'drf_yasg',
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -71,6 +77,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    'django.middleware.locale.LocaleMiddleware',
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -165,12 +172,20 @@ AUTH_USER_MODEL = "lexema_user.User"
 
 LANGUAGE_CODE = "ru-ru"
 
+
+LANGUAGES = [
+    ('en', 'English'),
+    ('ru', 'Русский'),
+]
+
 TIME_ZONE = "UTC"
 
 USE_I18N = True
-
+USE_L10N = True
 USE_TZ = True
-
+LOCALE_PATHS = [
+    os.path.join(BASE_DIR, 'locale'),
+]
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/

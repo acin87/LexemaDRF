@@ -1,8 +1,10 @@
-from rest_framework import serializers
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from django.utils.translation import gettext_lazy as _
 from django.core.exceptions import ValidationError
 from django.contrib.auth import get_user_model
 from django.utils import timezone
+from rest_framework import serializers
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+
 
 User = get_user_model()
 
@@ -11,10 +13,10 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     """Класс получения токенов"""
 
     def create(self, validated_data):
-        raise NotImplementedError("Create method is not supported.")
+        raise NotImplementedError(_("Метод создания не поддерживается."))
 
     def update(self, instance, validated_data):
-        raise NotImplementedError("Update method is not supported.")
+        raise NotImplementedError(_("Метод обновления не поддерживается."))
 
     def validate(self, attrs):
         username = attrs.get("username")
@@ -23,10 +25,10 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         user = self.get_user(username)
 
         if not user:
-            raise ValidationError({"username": ["Нет такой учетной записи"]})
+            raise ValidationError({"username": [_("Нет такой учетной записи")]})
 
         if not user.check_password(password):
-            raise ValidationError({"password": ["Неверный пароль"]})
+            raise ValidationError({"password": [_("Неверный пароль")]})
 
         user.last_login = timezone.now()
         user.save(update_fields=["last_login"])

@@ -1,10 +1,6 @@
-from datetime import datetime, timedelta
-from html import escape
-
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
-from lexema_friends.models import Friends
 from lexema_profile.models import ProfileImages
 
 User = get_user_model()

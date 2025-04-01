@@ -11,9 +11,9 @@ class CommentImagesSerializer(serializers.ModelSerializer):
         fields = ["image"]
         extra_args = {"image": {"required": False}}
 
-class CommentsSerializer(serializers.ModelSerializer):
 
-    user = UserSerializerWithAvatar(source="author",read_only=True)
+class CommentsSerializer(serializers.ModelSerializer):
+    user = UserSerializerWithAvatar(source="author", read_only=True)
 
     class Meta:
         model = Comments
@@ -46,13 +46,12 @@ class RecursiveRootCommentSerializer(serializers.ModelSerializer):
             'child_count'
         )
 
-
     def get_replies(self, instance):
         """
         Метод для получения дочерних комментариев только первого уровня.
         """
         if instance.parent is None:
-            children = instance.replies.all()[:1]
+            children = instance.replies.all().order_by('created_at')[:1]
             serializer = RecursiveRootCommentSerializer(children, many=True, context=self.context)
             return serializer.data
         else:
