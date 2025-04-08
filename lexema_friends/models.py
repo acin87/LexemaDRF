@@ -5,31 +5,31 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework.exceptions import ValidationError
 
 
-class Friends(models.Model):
+class Friend(models.Model):
     """Модель друзей с уведомлениями"""
 
     class Status(models.TextChoices):
-        PENDING = 'pending', _('Отправлено')
-        ACCEPTED = 'accepted', _('Подтверждено')
-        REJECTED = 'rejected', _('Отклонено')
+        PENDING = "pending", _("Отправлено")
+        ACCEPTED = "accepted", _("Подтверждено")
+        REJECTED = "rejected", _("Отклонено")
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="friends_sent",
-        verbose_name=_("Пользователь")
+        verbose_name=_("Пользователь"),
     )
     friend = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="friends_received",
-        verbose_name=_("Друг")
+        verbose_name=_("Друг"),
     )
     status = models.CharField(
         max_length=50,
         choices=Status.choices,
         default=Status.PENDING,
-        verbose_name=_("Статус")
+        verbose_name=_("Статус"),
     )
     created_at = models.DateTimeField(default=timezone.now, verbose_name=_("Создано"))
     updated_at = models.DateTimeField(auto_now=True, verbose_name=_("Обновлено"))
@@ -66,10 +66,7 @@ class Friends(models.Model):
             recipient=self.friend if status == self.Status.PENDING else self.user,
             sender=self.user if status == self.Status.PENDING else self.friend,
             notification_type=notification_type,
-            extra_data={
-                'friendship_id': self.id,
-                'status': status
-            }
+            extra_data={"friendship_id": self.id, "status": status},
         )
 
     def send_accept_notification(self):
@@ -81,15 +78,11 @@ class Friends(models.Model):
             recipient=self.user,
             sender=self.friend,
             notification_type=NotificationType.FRIEND_ACCEPTED,
-            extra_data={
-                'friendship_id': self.id,
-                'status': self.Status.ACCEPTED
-            }
+            extra_data={"friendship_id": self.id, "status": self.Status.ACCEPTED},
         )
 
     def remove_friendship(self, initiator):
-        """
-        Удаляет запись о дружбе с проверкой прав и отправкой уведомления.
+        """Удаляет запись о дружбе с проверкой прав и отправкой уведомления.
 
         :param initiator: Кто инициировал удаление (объект User)
         :raises ValidationError: Если initiator не участник дружбы
@@ -114,9 +107,5 @@ class Friends(models.Model):
             recipient=recipient,
             sender=initiator,
             notification_type=NotificationType.FRIEND_REMOVED,
-            extra_data={
-                'friendship_id': self.id,
-                'removed_by': initiator.id
-            }
+            extra_data={"friendship_id": self.id, "removed_by": initiator.id},
         )
-

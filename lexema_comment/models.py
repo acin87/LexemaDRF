@@ -9,7 +9,7 @@ from lexema_server import settings
 
 
 # Create your models here.
-class Comments(models.Model):
+class Comment(models.Model):
     post = models.ForeignKey(
         Post, on_delete=models.CASCADE, blank=True, related_name="comments"
     )
@@ -45,7 +45,7 @@ def comment_image_upload_to(instance, filename):
 
 class CommentImages(models.Model):
     comment = models.ForeignKey(
-        Comments, on_delete=models.CASCADE, blank=True, related_name="images"
+        Comment, on_delete=models.CASCADE, blank=True, related_name="images"
     )
     image = models.ImageField(upload_to=comment_image_upload_to, blank=True)
 

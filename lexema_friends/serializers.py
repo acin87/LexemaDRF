@@ -1,10 +1,13 @@
 from django.db.models import Q
 from rest_framework import serializers
-from lexema_friends.models import Friends
+from lexema_friends.models import Friend
 from lexema_group.models import GroupMembership
 from lexema_post.models import Post
 from lexema_profile.models import Profile
-from lexema_profile.serializers import (ProfileUpcomingBirthdaySerializer, ProfileImagesSerializer)
+from lexema_profile.serializers import (
+    ProfileUpcomingBirthdaySerializer,
+    ProfileImagesSerializer,
+)
 
 
 class FriendsSerializer(serializers.ModelSerializer):
@@ -17,7 +20,7 @@ class FriendsSerializer(serializers.ModelSerializer):
     isFilledProfile = serializers.SerializerMethodField()
 
     class Meta:
-        model = Friends
+        model = Friend
         fields = [
             "full_name",
             "friends_count",
@@ -31,19 +34,19 @@ class FriendsSerializer(serializers.ModelSerializer):
 
     def validate(self, data):
         # Проверка, что пользователь не отправляет запрос сам себе
-        if self.context['request'].user == data['friend']:
+        if self.context["request"].user == data["friend"]:
             raise serializers.ValidationError("Нельзя добавить себя в друзья")
         return data
 
     def get_full_name(self, obj):
-        return f'{obj.friend.first_name} {obj.friend.last_name}'
+        return f"{obj.friend.first_name} {obj.friend.last_name}"
 
     def get_isFilledProfile(self, obj):
         return Profile.objects.filter(user=obj.friend).exists()
 
     @staticmethod
     def get_friends_count(obj):
-        return Friends.objects.filter(friend=obj.friend, status="accepted").count()
+        return Friend.objects.filter(friend=obj.friend, status="accepted").count()
 
     @staticmethod
     def get_posts_count(obj):
@@ -57,7 +60,7 @@ class FriendsSerializer(serializers.ModelSerializer):
     def get_friend_friends_data(obj):
 
         friend_friends = (
-            Friends.objects.filter( (Q(user=obj.friend) | Q(friend=obj.friend)))
+            Friend.objects.filter((Q(user=obj.friend) | Q(friend=obj.friend)))
             .select_related("friend")
             .prefetch_related("friend__profile__images")[:5]
         )
@@ -66,8 +69,11 @@ class FriendsSerializer(serializers.ModelSerializer):
         for friend in friend_friends:
 
             friend_user = friend.user
-            friend_data = {"id": friend_user.id, "full_name": f'{friend_user.first_name} {friend_user.last_name}',
-                           "avatar_image": friend_user.profile.images.avatar_image.url}
+            friend_data = {
+                "id": friend_user.id,
+                "full_name": f"{friend_user.first_name} {friend_user.last_name}",
+                "avatar_image": friend_user.profile.images.avatar_image.url,
+            }
 
             friends_data.append(friend_data)
 
@@ -78,5 +84,5 @@ class UpcomingBirthDayFriendsSerializer(serializers.ModelSerializer):
     profile = ProfileUpcomingBirthdaySerializer(source="friend.profile", read_only=True)
 
     class Meta:
-        model = Friends
+        model = Friend
         fields = ["profile"]

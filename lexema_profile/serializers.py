@@ -4,12 +4,13 @@ from django.contrib.auth import get_user_model
 from django.db.models import Q
 from rest_framework import serializers
 
-from lexema_friends.models import Friends
+from lexema_friends.models import Friend
 from lexema_group.models import GroupMembership
 from lexema_post.models import Post
 from lexema_profile.models import Profile, ProfileImages
 
 User = get_user_model()
+
 
 class ProfileImagesSerializer(serializers.ModelSerializer):
 
@@ -63,37 +64,34 @@ class ProfileSerializer(serializers.ModelSerializer):
 
     @staticmethod
     def get_friends_count(obj):
-        return Friends.objects.filter(user=obj.user, status="accepted").count()
-
+        return Friend.objects.filter(user=obj.user, status="accepted").count()
 
     @staticmethod
     def get_posts_count(obj):
         return Post.objects.filter(author=obj.user).count()
 
-
     @staticmethod
     def get_groups_count(obj):
         return GroupMembership.objects.filter(user=obj.user).count()
 
-
     def get_is_friend(self, obj):
         user = self.context["request"].user
-        return Friends.objects.filter(
+        return Friend.objects.filter(
             Q(user=user, friend=obj.user) | Q(user=obj.user, friend=user),
-            Q(status="accepted")).exists()
-
+            Q(status="accepted"),
+        ).exists()
 
     def get_friend_status(self, obj):
         user = self.context["request"].user
-        queryset = Friends.objects.filter(
+        queryset = Friend.objects.filter(
             Q(user=user, friend=obj.user),
-            Q(status="pending") | Q(status="accepted") | Q(status="rejected")
+            Q(status="pending") | Q(status="accepted") | Q(status="rejected"),
         )
 
         status_choices = {
-            "pending": {'code': 0, 'name': 'Отправлено'},
-            "accepted": {'code': 1, 'name': 'Подтверждено'},
-            "rejected": {'code': 2, 'name': 'Отклонено'}
+            "pending": {"code": 0, "name": "Отправлено"},
+            "accepted": {"code": 1, "name": "Подтверждено"},
+            "rejected": {"code": 2, "name": "Отклонено"},
         }
 
         if queryset.exists():
@@ -104,9 +102,9 @@ class ProfileSerializer(serializers.ModelSerializer):
 
     def get_friendship_id(self, obj):
         user = self.context["request"].user
-        queryset = Friends.objects.filter(
+        queryset = Friend.objects.filter(
             Q(user=user, friend=obj.user) | Q(user=obj.user, friend=user),
-            Q(status="pending") | Q(status="accepted") | Q(status="rejected")
+            Q(status="pending") | Q(status="accepted") | Q(status="rejected"),
         )
 
         if queryset.exists():

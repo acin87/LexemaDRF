@@ -8,7 +8,6 @@ from django.db import models
 from PIL import Image
 
 
-# Create your models here.
 def profile_image_upload_to(instance, filename):
 
     new_filename = f"img_{instance.profile.user.id}_{uuid.uuid4().hex}.webp"

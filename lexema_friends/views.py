@@ -10,7 +10,7 @@ from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from lexema_friends.models import Friends
+from lexema_friends.models import Friend
 from lexema_friends.serializers import (
     FriendsSerializer,
     UpcomingBirthDayFriendsSerializer,
@@ -24,7 +24,7 @@ class FriendsViewSet(
     viewsets.GenericViewSet,
 ):
     permission_classes = [IsAuthenticated]
-    queryset = Friends.objects.all()
+    queryset = Friend.objects.all()
 
     serializer_class = FriendsSerializer
     pagination_class = LimitOffsetPagination
@@ -38,7 +38,7 @@ class FriendsViewSet(
 
     def list(self, request, *args, **kwargs):
         user = request.user
-        friends = Friends.objects.filter(user=user, status="accepted").select_related(
+        friends = Friend.objects.filter(user=user, status="accepted").select_related(
             "friend__profile__images"
         )
         serializer = FriendsSerializer(friends, many=True)
@@ -49,9 +49,9 @@ class FriendsViewSet(
         friend = request.data["friend_id"]
         if user == friend:
             raise ValidationError(_("Нельзя добавить себя в друзья"))
-        if Friends.objects.filter(user=user, friend_id=friend).exists():
+        if Friend.objects.filter(user=user, friend_id=friend).exists():
             raise ValidationError(_("Заявка уже отправлена"))
-        Friends.objects.create(user=user, friend_id=friend, status="pending")
+        Friend.objects.create(user=user, friend_id=friend, status="pending")
         return Response(status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=["patch"])
@@ -71,7 +71,7 @@ class FriendsViewSet(
             friendship.update_status(new_status)
             return Response(FriendsSerializer(friendship).data)
 
-        except Friends.DoesNotExist:
+        except Friend.DoesNotExist:
             return Response(
                 {"error": _("Запрос на дружбу не найден")},
                 status=status.HTTP_404_NOT_FOUND,
@@ -94,7 +94,7 @@ class FriendsViewSet(
             friendship.remove_friendship(initiator=request.user)
             return Response(status=status.HTTP_204_NO_CONTENT)
 
-        except Friends.DoesNotExist:
+        except Friend.DoesNotExist:
             return Response(
                 {"error": _("Запись о дружбе не найдена")},
                 status=status.HTTP_404_NOT_FOUND,
@@ -106,14 +106,14 @@ class FriendsViewSet(
     def cancel_request(self, request, pk=None):
         """Отмена запроса на дружбу (для отправителя). Удаление из друзей (для обеих сторон)"""
         try:
-            friendship = Friends.objects.get(
+            friendship = Friend.objects.get(
                 Q(id=pk) & (Q(user=request.user) | Q(friend=request.user))
             )
             print(friendship)
             # Если пользователь - отправитель запроса (может отменить pending)
             if (
                 friendship.user == request.user
-                and friendship.status == Friends.Status.PENDING
+                and friendship.status == Friend.Status.PENDING
             ):
                 friendship.delete()
                 return Response(status=status.HTTP_204_NO_CONTENT)
@@ -133,7 +133,7 @@ class FriendsViewSet(
                     status=status.HTTP_403_FORBIDDEN,
                 )
 
-        except Friends.DoesNotExist:
+        except Friend.DoesNotExist:
             return Response(
                 {"error": _("Запись о дружбе не найдена или у вас нет прав")},
                 status=status.HTTP_404_NOT_FOUND,
@@ -142,7 +142,7 @@ class FriendsViewSet(
 
 class UpcomingBirthDayFriendsView(APIView):
     permission_classes = [IsAuthenticated]
-    queryset = Friends.objects.all()
+    queryset = Friend.objects.all()
     serializer_class = UpcomingBirthDayFriendsSerializer
 
     @staticmethod
@@ -150,7 +150,7 @@ class UpcomingBirthDayFriendsView(APIView):
         user = request.user
         today = datetime.now().date()
         end_date = today + timedelta(days=5)
-        friends = Friends.objects.filter(user=user, status="accepted").select_related(
+        friends = Friend.objects.filter(user=user, status="accepted").select_related(
             "friend__profile"
         )
         friends = friends.filter(

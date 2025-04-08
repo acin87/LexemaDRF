@@ -7,7 +7,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, BasePermission
 from rest_framework.pagination import LimitOffsetPagination
 
-from lexema_friends.models import Friends
+from lexema_friends.models import Friend
 from lexema_group.models import GroupMembership
 from lexema_post.models import Post, PostImage, PostLike
 from lexema_post.serializers import PostSerializer, PostCreateSerializer
@@ -42,7 +42,7 @@ class MainFeedView(APIView):
             :10
         ]  # не забыть изменить на 1
 
-        friends = Friends.objects.filter(user=user, status="accepted").values_list(
+        friends = Friend.objects.filter(user=user, status="accepted").values_list(
             "friend", flat=True
         )
 

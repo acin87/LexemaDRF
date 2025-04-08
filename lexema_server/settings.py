@@ -17,9 +17,10 @@ from pathlib import Path
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-if os.name == 'nt':  # Windows
-    GETTEXT_PATH = r'C:\Program Files\gettext-iconv\bin'
-    os.environ['PATH'] = GETTEXT_PATH + ';' + os.environ['PATH']
+
+if os.name == "nt":  # Windows
+    GETTEXT_PATH = r"C:\Program Files\gettext-iconv\bin"
+    os.environ["PATH"] = GETTEXT_PATH + ";" + os.environ["PATH"]
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
@@ -30,7 +31,7 @@ SECRET_KEY = "django-insecure-8@o=2*lmi=)f%%19!62*3z0o=p3&bb-nnq+5#iy04%g-bk+@gi
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
 
 REST_FRAMEWORK = {
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.LimitOffsetPagination",
@@ -54,7 +55,7 @@ MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 INSTALLED_APPS = [
     "rest_framework",
     "rest_framework_simplejwt",
-    'lexema_user.apps.LexemaUserConfig',
+    "lexema_user.apps.LexemaUserConfig",
     "lexema_auth.apps.LexemaAuthConfig",
     "lexema_group.apps.LexemaGroupConfig",
     "lexema_post.apps.LexemaPostConfig",
@@ -65,7 +66,7 @@ INSTALLED_APPS = [
     "lexema_message.apps.LexemaMessageConfig",
     "django_filters",
     "corsheaders",
-    'drf_yasg',
+    "drf_yasg",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -77,7 +78,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
-    'django.middleware.locale.LocaleMiddleware',
+    "django.middleware.locale.LocaleMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -92,24 +93,24 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
 ]
 CORS_ALLOW_METHODS = [
-    'DELETE',
-    'GET',
-    'OPTIONS',
-    'PATCH',
-    'POST',
-    'PUT',
+    "DELETE",
+    "GET",
+    "OPTIONS",
+    "PATCH",
+    "POST",
+    "PUT",
 ]
 
 CORS_ALLOW_HEADERS = [
-    'accept',
-    'accept-encoding',
-    'authorization',
-    'content-type',
-    'dnt',
-    'origin',
-    'user-agent',
-    'x-csrftoken',
-    'x-requested-with',
+    "accept",
+    "accept-encoding",
+    "authorization",
+    "content-type",
+    "dnt",
+    "origin",
+    "user-agent",
+    "x-csrftoken",
+    "x-requested-with",
 ]
 
 TEMPLATES = [
@@ -174,8 +175,8 @@ LANGUAGE_CODE = "ru-ru"
 
 
 LANGUAGES = [
-    ('en', 'English'),
-    ('ru', 'Русский'),
+    ("en", "English"),
+    ("ru", "Русский"),
 ]
 
 TIME_ZONE = "UTC"
@@ -184,7 +185,7 @@ USE_I18N = True
 USE_L10N = True
 USE_TZ = True
 LOCALE_PATHS = [
-    os.path.join(BASE_DIR, 'locale'),
+    os.path.join(BASE_DIR, "locale"),
 ]
 
 # Static files (CSS, JavaScript, Images)

@@ -1,4 +1,5 @@
-from django.db.models import Q, Max
+from django.db import models
+from django.db.models import Q, Max, OuterRef, Subquery, When, Case, F
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -18,21 +19,38 @@ class MessageViewSet(viewsets.ModelViewSet):
         return FullMessageSerializer
 
     def get_queryset(self):
-
-        return (
+        print(self.request.user)
+        queryset = (
             self.queryset.filter(
                 Q(sender=self.request.user) | Q(recipient=self.request.user)
             )
             .select_related("sender", "recipient")
-            .order_by("-timestamp")
+            .order_by("timestamp")
         )
+        print(str(queryset.query))  # Выведет SQL-запрос
+        return queryset
 
     def list(self, request, *args, **kwargs):
-        queryset = self.get_queryset()
+        sender_id = request.GET.get("sender_id")
+
+        queryset = self.get_queryset().filter(
+            Q(sender_id=sender_id) | Q(recipient_id=sender_id)
+        )
+        print(sender_id)
 
         serializer = self.get_serializer(queryset, many=True)
 
         return Response(serializer.data)
+
+    @action(detail=False, methods=["post"])
+    def send_message(self, request, *args, **kwargs):
+        request.data["recipient"] = request.data.get("recipient_id")
+        request.data["sender"] = request.user.id
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        message = serializer.save(sender=request.user)
+
+        return Response(self.get_serializer(message).data)
 
     @action(detail=True, methods=["post"])
     def mark_as_read(self, request, pk=None):
@@ -52,21 +70,33 @@ class LatestMessageViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        # Получаем максимальные timestamp для каждого отправителя, где текущий пользователь - получатель
-        latest_messages = (
-            Message.objects.filter(recipient=self.request.user, is_read=False)
-            .values("sender")
-            .annotate(last_timestamp=Max("timestamp"))
-        )
+        if self.action == "list":
+            user = self.request.user
+            other_users = (
+                Message.objects.filter(Q(sender=user) | Q(recipient=user))
+                .annotate(
+                    other_user=Case(
+                        When(sender=user, then=F("recipient")),
+                        When(recipient=user, then=F("sender")),
+                        output_field=models.IntegerField(),
+                    )
+                )
+                .values("other_user")
+                .distinct()
+            )
 
-        # Получаем список ID последних сообщений
-        latest_message_ids = Message.objects.filter(
-            recipient=self.request.user,
-            timestamp__in=[item["last_timestamp"] for item in latest_messages],
-        ).values_list("id", flat=True)
+            latest_ids = []
+            for other in other_users:
+                last_msg = (
+                    Message.objects.filter(
+                        Q(sender=user, recipient=other["other_user"])
+                        | Q(sender=other["other_user"], recipient=user)
+                    )
+                    .order_by("-timestamp")
+                    .values("id")[:1]
+                )
+                latest_ids.append(last_msg[0]["id"])
 
-        return (
-            Message.objects.filter(id__in=latest_message_ids)
-            .select_related("sender", "recipient")
-            .order_by("-timestamp")
-        )
+            queryset = Message.objects.filter(id__in=latest_ids).order_by("-timestamp")
+
+            return queryset

@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from rest_framework.pagination import LimitOffsetPagination
 
-from lexema_comment.models import Comments, CommentImages
+from lexema_comment.models import Comment, CommentImages
 from lexema_user.serializers import UserSerializerWithAvatar
 
 
@@ -16,8 +16,17 @@ class CommentsSerializer(serializers.ModelSerializer):
     user = UserSerializerWithAvatar(source="author", read_only=True)
 
     class Meta:
-        model = Comments
-        fields = ('id', 'content', 'parent_id', 'user', 'likes', 'post_id', 'created_at', 'updated_at')
+        model = Comment
+        fields = (
+            "id",
+            "content",
+            "parent_id",
+            "user",
+            "likes",
+            "post_id",
+            "created_at",
+            "updated_at",
+        )
 
 
 class RecursiveRootCommentSerializer(serializers.ModelSerializer):
@@ -25,25 +34,26 @@ class RecursiveRootCommentSerializer(serializers.ModelSerializer):
     Сериализатор для вывода древовидных комментариев.
     Рекурсивно выводит только один уровень дочерних комментариев.
     """
+
     user = UserSerializerWithAvatar(source="author", read_only=True)
     images = CommentImagesSerializer(many=True, read_only=True)
     replies = serializers.SerializerMethodField()
     child_count = serializers.SerializerMethodField()
 
     class Meta:
-        model = Comments
+        model = Comment
         fields = (
-            'id',
-            'content',
-            'parent_id',
-            'user',
-            'likes',
-            'images',
-            'post_id',
-            'created_at',
-            'updated_at',
-            'replies',
-            'child_count'
+            "id",
+            "content",
+            "parent_id",
+            "user",
+            "likes",
+            "images",
+            "post_id",
+            "created_at",
+            "updated_at",
+            "replies",
+            "child_count",
         )
 
     def get_replies(self, instance):
@@ -51,8 +61,10 @@ class RecursiveRootCommentSerializer(serializers.ModelSerializer):
         Метод для получения дочерних комментариев только первого уровня.
         """
         if instance.parent is None:
-            children = instance.replies.all().order_by('created_at')[:1]
-            serializer = RecursiveRootCommentSerializer(children, many=True, context=self.context)
+            children = instance.replies.all().order_by("created_at")[:1]
+            serializer = RecursiveRootCommentSerializer(
+                children, many=True, context=self.context
+            )
             return serializer.data
         else:
             return []
@@ -70,32 +82,33 @@ class RecursiveChildCommentsSerializer(serializers.ModelSerializer):
     Сериализатор для вывода древовидных комментариев.
     Рекурсивно выводит все дочерние комментарии.
     """
+
     user = UserSerializerWithAvatar(source="author", read_only=True)
     images = CommentImagesSerializer(many=True, read_only=True)
     replies = serializers.SerializerMethodField()
     child_count = serializers.SerializerMethodField()
 
     class Meta:
-        model = Comments
+        model = Comment
         fields = (
-            'id',
-            'content',
-            'parent_id',
-            'user',
-            'likes',
-            'images',
-            'post_id',
-            'created_at',
-            'updated_at',
-            'replies',
-            'child_count'
+            "id",
+            "content",
+            "parent_id",
+            "user",
+            "likes",
+            "images",
+            "post_id",
+            "created_at",
+            "updated_at",
+            "replies",
+            "child_count",
         )
 
     def get_replies(self, instance):
         """
         Метод для получения всех дочерних комментариев с рекурсией.
         """
-        children = instance.replies.all().order_by('created_at')[:1]
+        children = instance.replies.all().order_by("created_at")[:1]
         serializer = type(self)(children, many=True)
         return serializer.data
 

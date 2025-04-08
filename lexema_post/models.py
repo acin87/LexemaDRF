@@ -8,8 +8,8 @@ from django.core.exceptions import ValidationError
 from django.conf import settings
 from django.db.models import Q
 
-from lexema_friends.models import Friends
-from lexema_group.models import LexemaGroups
+from lexema_friends.models import Friend
+from lexema_group.models import LexemaGroup
 from lexema_user.models import User
 
 
@@ -22,7 +22,7 @@ class Post(models.Model):
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="user_posts"
     )
     group = models.ForeignKey(
-        LexemaGroups,
+        LexemaGroup,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -65,9 +65,9 @@ class Post(models.Model):
         ordering = ["-created_at"]
 
     def send_notification(self):
-        friends = Friends.objects.filter(
-            Q(user=self.author) | Q(friend=self.author),
-            Q(status="accepted"))
+        friends = Friend.objects.filter(
+            Q(user=self.author) | Q(friend=self.author), Q(status="accepted")
+        )
         for friend in friends:
             self._send_new_post_notification(friend.user, friend.friend)
 
@@ -80,9 +80,9 @@ class Post(models.Model):
             sender=initiator,
             notification_type=NotificationType.FRIEND_NEW_POST,
             extra_data={
-                'post_id': self.id,
-                'author_id': initiator.pk,
-            }
+                "post_id": self.id,
+                "author_id": initiator.pk,
+            },
         )
 
 
@@ -119,41 +119,36 @@ class PostImage(models.Model):
 
 class PostLike(models.Model):
     """Модель лайков поста. Один пользователь может лайкнуть пост только один раз."""
+
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name='post_likes',
-        verbose_name='Пользователь'
+        related_name="post_likes",
+        verbose_name="Пользователь",
     )
     post = models.ForeignKey(
-        Post,
-        on_delete=models.CASCADE,
-        related_name='likes',
-        verbose_name='Пост'
+        Post, on_delete=models.CASCADE, related_name="likes", verbose_name="Пост"
     )
-    created_at = models.DateTimeField(
-        auto_now_add=True,
-        verbose_name='Дата создания'
-    )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
     reaction_type = models.CharField(
         max_length=20,
-        default='like',
-        choices=[('like', 'Like'), ('dislike', 'Dislike')],
-        verbose_name='Тип реакции'
+        default="like",
+        choices=[("like", "Like"), ("dislike", "Dislike")],
+        verbose_name="Тип реакции",
     )
 
     class Meta:
-        verbose_name = 'Лайк поста'
-        verbose_name_plural = 'Лайки постов'
-        unique_together = ('user', 'post')
-        ordering = ['-created_at']
+        verbose_name = "Лайк поста"
+        verbose_name_plural = "Лайки постов"
+        unique_together = ("user", "post")
+        ordering = ["-created_at"]
 
     def __str__(self):
-        return f'{self.user} - {self.reaction_type} - {self.post.id}'
+        return f"{self.user} - {self.reaction_type} - {self.post.id}"
 
     def clean(self):
         if self.user == self.post.author:
-            raise ValidationError('Вы не можете лайкать свои собственные посты')
+            raise ValidationError("Вы не можете лайкать свои собственные посты")
 
     def save(self, *args, **kwargs):
         self.full_clean()

@@ -3,7 +3,7 @@ from django.db import models
 from django.contrib.auth.models import User
 
 
-class LexemaGroups(models.Model):
+class LexemaGroup(models.Model):
     """Модель групп"""
 
     id = models.AutoField(primary_key=True)
@@ -26,8 +26,15 @@ class LexemaGroups(models.Model):
 
 class GroupMembership(models.Model):
     """Модель для участия в группе"""
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="group_memberships")
-    group = models.ForeignKey(LexemaGroups, on_delete=models.CASCADE, related_name="members")
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="group_memberships",
+    )
+    group = models.ForeignKey(
+        LexemaGroup, on_delete=models.CASCADE, related_name="members"
+    )
     joined_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
