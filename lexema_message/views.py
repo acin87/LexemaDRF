@@ -1,5 +1,6 @@
 from django.db import models
 from django.db.models import Q, Max, OuterRef, Subquery, When, Case, F
+from django.db.models.fields import return_None
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -19,7 +20,6 @@ class MessageViewSet(viewsets.ModelViewSet):
         return FullMessageSerializer
 
     def get_queryset(self):
-        print(self.request.user)
         queryset = (
             self.queryset.filter(
                 Q(sender=self.request.user) | Q(recipient=self.request.user)
@@ -27,7 +27,7 @@ class MessageViewSet(viewsets.ModelViewSet):
             .select_related("sender", "recipient")
             .order_by("timestamp")
         )
-        print(str(queryset.query))  # Выведет SQL-запрос
+
         return queryset
 
     def list(self, request, *args, **kwargs):
@@ -36,7 +36,6 @@ class MessageViewSet(viewsets.ModelViewSet):
         queryset = self.get_queryset().filter(
             Q(sender_id=sender_id) | Q(recipient_id=sender_id)
         )
-        print(sender_id)
 
         serializer = self.get_serializer(queryset, many=True)
 
@@ -44,6 +43,7 @@ class MessageViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=["post"])
     def send_message(self, request, *args, **kwargs):
+        print(request.data)
         request.data["recipient"] = request.data.get("recipient_id")
         request.data["sender"] = request.user.id
         serializer = self.get_serializer(data=request.data)
@@ -62,6 +62,21 @@ class MessageViewSet(viewsets.ModelViewSet):
             {"error": "Вы не получатель этого сообщения"},
             status=status.HTTP_403_FORBIDDEN,
         )
+
+    @action(detail=False, methods=["delete"])
+    def delete_all_messages(self, request, *args, **kwargs):
+        print(request)
+        recipient_id = request.data.get("recipient_id")
+        if request.user.pk == request.data.get("recipient_id"):
+            return None
+
+        print(recipient_id)
+        queryset = Message.objects.filter(
+            Q(recipient_id=recipient_id) & Q(sender=request.user)
+        )
+        print(queryset)
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class LatestMessageViewSet(viewsets.ReadOnlyModelViewSet):

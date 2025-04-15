@@ -16,8 +16,10 @@ class FriendsSerializer(serializers.ModelSerializer):
     posts_count = serializers.SerializerMethodField()
     groups_count = serializers.SerializerMethodField()
     friend_friends_data = serializers.SerializerMethodField()
-    images = ProfileImagesSerializer(source="friend.profile.images", read_only=True)
     isFilledProfile = serializers.SerializerMethodField()
+    last_login = serializers.SerializerMethodField()
+    avatar = serializers.SerializerMethodField()
+    profile_image = serializers.SerializerMethodField()
 
     class Meta:
         model = Friend
@@ -28,8 +30,10 @@ class FriendsSerializer(serializers.ModelSerializer):
             "groups_count",
             "friend_id",
             "friend_friends_data",
-            "images",
+            "avatar",
+            "profile_image",
             "isFilledProfile",
+            "last_login",
         ]
 
     def validate(self, data):
@@ -37,6 +41,28 @@ class FriendsSerializer(serializers.ModelSerializer):
         if self.context["request"].user == data["friend"]:
             raise serializers.ValidationError("Нельзя добавить себя в друзья")
         return data
+
+    def get_avatar(self, obj):
+        """Возвращаем аватар пользователя"""
+        avatar = (
+            Profile.objects.filter(user=obj.friend).select_related("images").first()
+        )
+
+        if avatar and avatar.images.avatar_image:
+            return avatar.images.avatar_image.url
+        return None
+
+    def get_profile_image(self, obj):
+        profile_image = (
+            Profile.objects.filter(user=obj.friend).select_related("images").first()
+        )
+
+        if profile_image and profile_image.images.main_page_image:
+            return profile_image.images.main_page_image.url
+        return None
+
+    def get_last_login(self, obj):
+        return obj.friend.last_login
 
     def get_full_name(self, obj):
         return f"{obj.friend.first_name} {obj.friend.last_name}"
