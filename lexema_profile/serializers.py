@@ -33,7 +33,8 @@ class UserSerializer(serializers.ModelSerializer):
 class ProfileSerializer(serializers.ModelSerializer):
 
     user = UserSerializer(read_only=True)
-    images = ProfileImagesSerializer(read_only=True)
+    avatar = serializers.SerializerMethodField()
+    profile_image = serializers.SerializerMethodField()
     friends_count = serializers.SerializerMethodField()
     posts_count = serializers.SerializerMethodField()
     groups_count = serializers.SerializerMethodField()
@@ -60,7 +61,21 @@ class ProfileSerializer(serializers.ModelSerializer):
             "is_friend",
             "friend_status",
             "friendship_id",
+            "avatar",
+            "profile_image",
         ]
+
+    @staticmethod
+    def get_avatar(obj):
+        if obj.images and obj.images.avatar_image:
+            return obj.images.avatar_image.url
+        return None
+
+    @staticmethod
+    def get_profile_image(obj):
+        if obj.images and obj.images.main_page_image:
+            return obj.images.main_page_image.url
+        return None
 
     @staticmethod
     def get_friends_count(obj):

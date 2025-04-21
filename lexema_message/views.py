@@ -7,6 +7,7 @@ from rest_framework.response import Response
 
 from lexema_message.models import Message
 from lexema_message.serializers import FullMessageSerializer, ShortMessageSerializer
+from lexema_notification.models import Notification, NotificationType
 
 
 class MessageViewSet(viewsets.ModelViewSet):
@@ -38,7 +39,7 @@ class MessageViewSet(viewsets.ModelViewSet):
         )
 
         serializer = self.get_serializer(queryset, many=True)
-
+        print(serializer.data)
         return Response(serializer.data)
 
     @action(detail=False, methods=["post"])
@@ -49,7 +50,7 @@ class MessageViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         message = serializer.save(sender=request.user)
-
+        print(self.get_serializer(message).data)
         return Response(self.get_serializer(message).data)
 
     @action(detail=True, methods=["post"])
@@ -63,20 +64,42 @@ class MessageViewSet(viewsets.ModelViewSet):
             status=status.HTTP_403_FORBIDDEN,
         )
 
+    @action(detail=False, methods=["post"])
+    def mark_as_read_all_messages(self, request, *args, **kwargs):
+        sender_id = request.data.get("sender_id")
+        if request.user.pk == request.data.get("sender_id"):
+            return None
+        queryset = Message.objects.filter(
+            Q(recipient_id=sender_id, sender=request.user)
+            | Q(sender_id=sender_id, recipient=request.user),
+        )
+        if queryset.exists():
+            queryset.update(is_read=True)
+
+            Notification.objects.filter(
+                recipient=request.user,
+                sender_id=sender_id,
+                notification_type=NotificationType.NEW_MESSAGE,
+            ).update(is_read=True)
+
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response(status=status.HTTP_400_BAD_REQUEST)
+
     @action(detail=False, methods=["delete"])
     def delete_all_messages(self, request, *args, **kwargs):
-        print(request)
         recipient_id = request.data.get("recipient_id")
         if request.user.pk == request.data.get("recipient_id"):
             return None
 
-        print(recipient_id)
         queryset = Message.objects.filter(
-            Q(recipient_id=recipient_id) & Q(sender=request.user)
+            Q(recipient_id=recipient_id, sender=request.user)
+            | Q(sender_id=recipient_id, recipient=request.user)
         )
-        print(queryset)
+        if queryset.exists():
+            queryset.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
 
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response(status=status.HTTP_400_BAD_REQUEST)
 
 
 class LatestMessageViewSet(viewsets.ReadOnlyModelViewSet):
