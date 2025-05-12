@@ -52,7 +52,7 @@ class Message(models.Model):
                 recipient=self.recipient,
                 sender=self.sender,
                 notification_type=NotificationType.NEW_MESSAGE,
-                message=f"{_("Новое сообщение от")} {self.sender.username}",
+                message=f"{_("Новое сообщение от")} {self.sender.first_name} {self.sender.last_name}",
                 content_type=ContentType.objects.get_for_model(self),
                 object_id=self.id,
                 extra_data={

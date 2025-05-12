@@ -50,7 +50,6 @@ class MessageViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         message = serializer.save(sender=request.user)
-        print(self.get_serializer(message).data)
         return Response(self.get_serializer(message).data)
 
     @action(detail=True, methods=["post"])

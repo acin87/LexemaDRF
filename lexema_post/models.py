@@ -87,9 +87,7 @@ class Post(models.Model):
 
 
 def post_image_upload_to(instance, filename):
-    """
-    Генерация пути и имени файла для изображения поста.
-    """
+    """Генерация пути и имени файла для изображения поста"""
 
     ext = filename.split(".")[-1]
 

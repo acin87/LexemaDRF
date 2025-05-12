@@ -34,6 +34,7 @@ class FriendsSerializer(serializers.ModelSerializer):
             "profile_image",
             "isFilledProfile",
             "last_login",
+            "status",
         ]
 
     def validate(self, data):
@@ -84,9 +85,10 @@ class FriendsSerializer(serializers.ModelSerializer):
 
     @staticmethod
     def get_friend_friends_data(obj):
-
+        print(obj.friend)
+        print(obj.user)
         friend_friends = (
-            Friend.objects.filter((Q(user=obj.friend) | Q(friend=obj.friend)))
+            Friend.objects.filter(Q(user=obj.friend) | Q(friend=obj.friend))
             .select_related("friend")
             .prefetch_related("friend__profile__images")[:5]
         )

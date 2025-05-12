@@ -42,6 +42,7 @@ class FriendsViewSet(
             "friend__profile__images"
         )
         serializer = FriendsSerializer(friends, many=True)
+        print(friends)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def create(self, request, *args, **kwargs):
@@ -58,8 +59,9 @@ class FriendsViewSet(
     def update_status(self, request, pk=None):
         try:
             friendship = self.get_object()
+            print(friendship)
             new_status = request.data.get("status")
-
+            print(new_status)
             # Проверяем, что текущий пользователь - получатель запроса
             if friendship.friend != request.user:
                 return Response(
@@ -68,7 +70,9 @@ class FriendsViewSet(
                 )
 
             # Обновляем статус
-            friendship.update_status(new_status)
+            friendship.status = new_status
+            friendship.save()
+
             return Response(FriendsSerializer(friendship).data)
 
         except Friend.DoesNotExist:
@@ -109,7 +113,6 @@ class FriendsViewSet(
             friendship = Friend.objects.get(
                 Q(id=pk) & (Q(user=request.user) | Q(friend=request.user))
             )
-            print(friendship)
             # Если пользователь - отправитель запроса (может отменить pending)
             if (
                 friendship.user == request.user
