@@ -46,6 +46,7 @@ urlpatterns = [
     path("api/", include("lexema_comment.urls")),
     path("api/", include("lexema_notification.urls")),
     path("api/", include("lexema_message.urls")),
+    path("api/", include("lexema_gallery.urls")),
     path(
         "swagger/",
         schema_view.with_ui("swagger", cache_timeout=0),

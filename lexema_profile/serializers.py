@@ -32,7 +32,9 @@ class UserSerializer(serializers.ModelSerializer):
 
 class ProfileSerializer(serializers.ModelSerializer):
 
-    user = UserSerializer(read_only=True)
+    first_name = serializers.SerializerMethodField()
+    last_name = serializers.SerializerMethodField()
+    full_name = serializers.SerializerMethodField()
     avatar = serializers.SerializerMethodField()
     profile_image = serializers.SerializerMethodField()
     friends_count = serializers.SerializerMethodField()
@@ -45,8 +47,6 @@ class ProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = Profile
         fields = [
-            "user",
-            "images",
             "education",
             "company",
             "gender",
@@ -63,7 +63,20 @@ class ProfileSerializer(serializers.ModelSerializer):
             "friendship_id",
             "avatar",
             "profile_image",
+            "phone",
+            "first_name",
+            "last_name",
+            "full_name",
         ]
+
+    def get_first_name(self, obj):
+        return obj.user.first_name
+
+    def get_last_name(self, obj):
+        return obj.user.last_name
+
+    def get_full_name(self, obj):
+        return obj.user.get_full_name()
 
     @staticmethod
     def get_avatar(obj):

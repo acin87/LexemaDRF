@@ -64,6 +64,7 @@ INSTALLED_APPS = [
     "lexema_comment.apps.LexemaCommentConfig",
     "lexema_notification.apps.LexemaNotificationConfig",
     "lexema_message.apps.LexemaMessageConfig",
+    "lexema_gallery.apps.LexemaGalleryConfig",
     "django_filters",
     "corsheaders",
     "drf_yasg",

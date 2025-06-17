@@ -3,10 +3,13 @@
 import os
 import textwrap
 import uuid
+
+from PIL import Image
 from django.db import models
 from django.core.exceptions import ValidationError
 from django.conf import settings
 from django.db.models import Q
+from django.utils import timezone
 
 from lexema_friends.models import Friend
 from lexema_group.models import LexemaGroup
@@ -103,6 +106,8 @@ class PostImage(models.Model):
 
     post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name="images")
     image = models.ImageField(upload_to=post_image_upload_to)
+    uploaded_at = models.DateTimeField(default=timezone.now)
+    uploaded_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
 
     def __str__(self):
         return self.image.name

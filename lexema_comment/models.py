@@ -2,7 +2,9 @@ import os
 import textwrap
 import uuid
 
+from PIL import Image
 from django.db import models
+from django.utils import timezone
 
 from lexema_post.models import Post
 from lexema_server import settings
@@ -48,6 +50,8 @@ class CommentImages(models.Model):
         Comment, on_delete=models.CASCADE, blank=True, related_name="images"
     )
     image = models.ImageField(upload_to=comment_image_upload_to, blank=True)
+    uploaded_at = models.DateTimeField(default=timezone.now)
+    uploaded_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
 
     def __str__(self):
         return f"{self.comment.id} - {self.comment.post_id} --- {textwrap.shorten(self.comment.content, width=100, placeholder="...")}"

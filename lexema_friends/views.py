@@ -1,11 +1,13 @@
 from datetime import datetime, timedelta
 
+from django.contrib.auth import get_user_model
 from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
 from django_filters.rest_framework.backends import DjangoFilterBackend
 from rest_framework import status, viewsets, mixins
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
+from rest_framework.generics import get_object_or_404
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -38,11 +40,45 @@ class FriendsViewSet(
 
     def list(self, request, *args, **kwargs):
         user = request.user
-        friends = Friend.objects.filter(user=user, status="accepted").select_related(
-            "friend__profile__images"
-        )
-        serializer = FriendsSerializer(friends, many=True)
-        print(friends)
+        # Получаем все подтвержденные дружеские связи, где пользователь участвует
+        friendships = Friend.objects.filter(
+            Q(user=user) | Q(friend=user), status="accepted"
+        ).select_related("user__profile__images", "friend__profile__images")
+
+        # Собираем уникальных друзей
+        friends_data = []
+        seen_user_ids = set()
+
+        for friendship in friendships:
+            # Определяем, кто является другом (не текущий пользователь)
+            if friendship.user == user:
+                friend_user = friendship.friend
+                friendship_creator = False  # Дружбу создал текущий пользователь
+            else:
+                friend_user = friendship.user
+                friendship_creator = True  # Дружбу создал другой пользователь
+
+            # Пропускаем дубликаты
+            if friend_user.id in seen_user_ids:
+                continue
+
+            seen_user_ids.add(friend_user.id)
+
+            # Создаем временный объект Friend с нужными данными
+            temp_friend = Friend(
+                id=friendship.id,
+                user=user,  # Всегда текущий пользователь
+                friend=friend_user,
+                status="accepted",
+                created_at=friendship.created_at,
+                updated_at=friendship.updated_at,
+            )
+            # Добавляем флаг, кто инициировал дружбу
+            temp_friend.friendship_creator = friendship_creator
+
+            friends_data.append(temp_friend)
+
+        serializer = self.get_serializer(friends_data, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def create(self, request, *args, **kwargs):
@@ -54,6 +90,59 @@ class FriendsViewSet(
             raise ValidationError(_("Заявка уже отправлена"))
         Friend.objects.create(user=user, friend_id=friend, status="pending")
         return Response(status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=["get"], url_path="mutual_friends")
+    def mutual(self, request, pk=None):
+        """Список друзей пользователя с отметкой общих друзей"""
+        current_user = request.user
+        target_user = get_object_or_404(get_user_model(), pk=pk)
+
+        # Получаем всех друзей целевого пользователя (кроме текущего)
+        target_friends = (
+            Friend.objects.filter(
+                (Q(user=target_user) | Q(friend=target_user)), status="accepted"
+            )
+            .exclude(Q(user=current_user) | Q(friend=current_user))
+            .select_related("user__profile__images", "friend__profile__images")
+        )
+
+        friends_data = []
+        seen_users = set()
+
+        for friendship in target_friends:
+
+            friend_user = (
+                friendship.friend if friendship.user == target_user else friendship.user
+            )
+
+            if friend_user.id in seen_users:
+                continue
+
+            seen_users.add(friend_user.id)
+
+            temp_friend = Friend(
+                id=friendship.id,
+                user=target_user,
+                friend=friend_user,
+                status="accepted",
+                created_at=friendship.created_at,
+                updated_at=friendship.updated_at,
+            )
+            friends_data.append(temp_friend)
+
+        # Сериализуем с флагом mutual_mode
+        serializer = self.get_serializer(
+            friends_data,
+            many=True,
+            context={
+                "request": request,
+                "mutual_mode": True,  # Включаем режим отображения isMutual
+            },
+        )
+
+        # Подсчет общих друзей
+
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=["patch"])
     def update_status(self, request, pk=None):
