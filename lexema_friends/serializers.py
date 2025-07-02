@@ -67,28 +67,33 @@ class FriendsSerializer(serializers.ModelSerializer):
 
     def get_avatar(self, obj):
         """Возвращаем аватар пользователя"""
-        avatar = (
+        profile = (
             Profile.objects.filter(user=obj.friend).select_related("images").first()
         )
 
-        if avatar and avatar.images.avatar_image:
-            return avatar.images.avatar_image.url
+        if hasattr(profile, "images"):
+            if profile.images.avatar_image:
+                return profile.images.avatar_image.url
         return None
 
     def get_profile_image(self, obj):
-        profile_image = (
+        profile = (
             Profile.objects.filter(user=obj.friend).select_related("images").first()
         )
 
-        if profile_image and profile_image.images.main_page_image:
-            return profile_image.images.main_page_image.url
+        if hasattr(profile, "images") and hasattr(profile.images, "main_page_image"):
+            if profile.images.main_page_image:
+                return profile.images.main_page_image.url
+
         return None
 
     def get_last_login(self, obj):
         return obj.friend.last_login
 
     def get_full_name(self, obj):
-        return f"{obj.friend.first_name} {obj.friend.last_name}"
+        if obj.friend.first_name and obj.friend.last_name:
+            return f"{obj.friend.first_name} {obj.friend.last_name}"
+        return None
 
     def get_isFilledProfile(self, obj):
         return Profile.objects.filter(user=obj.friend).exists()
@@ -108,21 +113,24 @@ class FriendsSerializer(serializers.ModelSerializer):
     @staticmethod
     def get_friend_friends_data(obj):
         friend_friends = Friend.objects.filter(
-            Q(user=obj.friend) | Q(friend=obj.friend)
+            Q(user=obj.friend) | Q(friend=obj.friend), status="accepted"
         ).select_related("friend", "friend__profile", "friend__profile__images")
-        print(friend_friends)
+
         friends_data = []
         for friend in friend_friends:
-            friend_user = friend.user
-            print(friend_user)
+            friend_user = friend.user if friend.user != obj.friend else friend.friend
+
             # исключаем себя из списка друзей
-            if friend_user == obj.friend:
+            if friend_user == obj.user or friend_user == obj.friend:
                 continue
-            print(friend_user)
+
+            full_name = f"{friend_user.first_name} {friend_user.last_name}"
+            if full_name == " ":
+                full_name = None
             # Базовые данные, которые всегда есть
             friend_data = {
                 "id": friend_user.id,
-                "full_name": f"{friend_user.first_name} {friend_user.last_name}",
+                "full_name": full_name if full_name else friend_user.username,
                 "avatar_image": None,  # По умолчанию None
             }
 
@@ -140,6 +148,13 @@ class FriendsSerializer(serializers.ModelSerializer):
             friends_data.append(friend_data)
 
         return friends_data
+
+
+class FriendCheckSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Friend
+        fields = ["friend", "user", "status"]
 
 
 class UpcomingBirthDayFriendsSerializer(serializers.ModelSerializer):

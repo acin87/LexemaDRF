@@ -6,6 +6,7 @@ from rest_framework import status, generics, permissions
 from rest_framework_simplejwt.views import TokenObtainPairView
 
 from lexema_auth.serializers import CustomTokenObtainPairSerializer, RegisterSerializer
+from lexema_profile.models import Profile, ProfileImages
 
 
 class CustomTokenObtainPairView(TokenObtainPairView):
@@ -32,6 +33,13 @@ class RegisterView(generics.CreateAPIView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
+        if user:
+            profile = Profile.objects.create(user=user)
+            profile.save()
+            profile_images = ProfileImages.objects.create(profile=profile)
+            profile_images.main_page_image = "users/images/default_profile_image.webp"
+            profile_images.save()
+
         return Response(
             {
                 "user": RegisterSerializer(

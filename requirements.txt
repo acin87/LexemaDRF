@@ -19,3 +19,6 @@ pylint-plugin-utils==0.8.2
 sqlparse==0.5.3
 tomlkit==0.13.2
 tzdata==2025.1
+
+celery~=5.5.3
+drf-yasg~=1.21.10

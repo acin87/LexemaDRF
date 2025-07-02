@@ -72,7 +72,9 @@ class Post(models.Model):
             Q(user=self.author) | Q(friend=self.author), Q(status="accepted")
         )
         for friend in friends:
-            self._send_new_post_notification(friend.user, friend.friend)
+            recipient = friend.user if friend.friend == self.author else friend.friend
+            if recipient != self.author:  # Не отправляем уведомление себе
+                self._send_new_post_notification(self.author, recipient)
 
     def _send_new_post_notification(self, initiator, recipient):
         """Приватный метод для отправки уведомления о новом посте друга."""

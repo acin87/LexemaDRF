@@ -32,8 +32,8 @@ def handle_friend_notification(sender, instance, created, **kwargs):
             instance.send_notification(current_status)
 
             # Дополнительное уведомление при принятии дружбы
-            if current_status == Friend.Status.ACCEPTED:
-                instance.send_accept_notification()
+            # if current_status == Friend.Status.ACCEPTED:
+            #     instance.send_accept_notification()
 
 
 @receiver(post_save, sender=Post)

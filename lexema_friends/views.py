@@ -16,6 +16,7 @@ from lexema_friends.models import Friend
 from lexema_friends.serializers import (
     FriendsSerializer,
     UpcomingBirthDayFriendsSerializer,
+    FriendCheckSerializer,
 )
 
 
@@ -23,6 +24,7 @@ from lexema_friends.serializers import (
 class FriendsViewSet(
     mixins.ListModelMixin,
     mixins.CreateModelMixin,
+    mixins.RetrieveModelMixin,
     viewsets.GenericViewSet,
 ):
     permission_classes = [IsAuthenticated]
@@ -88,8 +90,29 @@ class FriendsViewSet(
             raise ValidationError(_("Нельзя добавить себя в друзья"))
         if Friend.objects.filter(user=user, friend_id=friend).exists():
             raise ValidationError(_("Заявка уже отправлена"))
-        Friend.objects.create(user=user, friend_id=friend, status="pending")
-        return Response(status=status.HTTP_201_CREATED)
+        friendship = Friend.objects.create(
+            user=user, friend_id=friend, status="pending"
+        )
+
+        response = {
+            "friendship_id": friendship.pk,
+            "status_data": {"code": 0, "name": "Отправлено"},
+        }
+
+        return Response(response, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=["get"], url_path="check_friendship")
+    def check_friendship(self, request, pk=None):
+        """Проверяет, есть ли дружба между двумя пользователями"""
+        user = request.user
+        friend = get_object_or_404(get_user_model(), pk=pk)
+        friendship = Friend.objects.filter(
+            Q(user=user, friend=friend) | Q(friend=user, user=friend)
+        )
+        if friendship.exists():
+            serializer = FriendCheckSerializer(friendship.first())
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(status=status.HTTP_404_NOT_FOUND)
 
     @action(detail=True, methods=["get"], url_path="mutual_friends")
     def mutual(self, request, pk=None):
@@ -108,6 +131,8 @@ class FriendsViewSet(
 
         friends_data = []
         seen_users = set()
+        mutual_count = 0
+        online_count = 0
 
         for friendship in target_friends:
 
@@ -117,6 +142,20 @@ class FriendsViewSet(
 
             if friend_user.id in seen_users:
                 continue
+
+            is_mutual = Friend.objects.filter(
+                (
+                    Q(user=current_user, friend=friend_user)
+                    | Q(user=friend_user, friend=current_user)
+                ),
+                status="accepted",
+            ).exists()
+
+            if is_mutual:
+                mutual_count += 1
+
+            if friend_user.is_online:
+                online_count += 1
 
             seen_users.add(friend_user.id)
 
@@ -140,17 +179,26 @@ class FriendsViewSet(
             },
         )
 
+        response_data = {
+            "friends": serializer.data,
+            "stats": {
+                "total_friends": len(friends_data),
+                "mutual_friends": mutual_count,
+                "online_friends": online_count,
+            },
+        }
+
         # Подсчет общих друзей
 
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(response_data, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=["patch"])
     def update_status(self, request, pk=None):
         try:
             friendship = self.get_object()
-            print(friendship)
+
             new_status = request.data.get("status")
-            print(new_status)
+
             # Проверяем, что текущий пользователь - получатель запроса
             if friendship.friend != request.user:
                 return Response(

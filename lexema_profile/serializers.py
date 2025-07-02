@@ -35,6 +35,7 @@ class ProfileSerializer(serializers.ModelSerializer):
     first_name = serializers.SerializerMethodField()
     last_name = serializers.SerializerMethodField()
     full_name = serializers.SerializerMethodField()
+    username = serializers.SerializerMethodField()
     avatar = serializers.SerializerMethodField()
     profile_image = serializers.SerializerMethodField()
     friends_count = serializers.SerializerMethodField()
@@ -67,7 +68,11 @@ class ProfileSerializer(serializers.ModelSerializer):
             "first_name",
             "last_name",
             "full_name",
+            "username",
         ]
+
+    def get_username(self, obj):
+        return obj.user.username
 
     def get_first_name(self, obj):
         return obj.user.first_name
@@ -112,7 +117,7 @@ class ProfileSerializer(serializers.ModelSerializer):
     def get_friend_status(self, obj):
         user = self.context["request"].user
         queryset = Friend.objects.filter(
-            Q(user=user, friend=obj.user),
+            Q(user=user, friend=obj.user) | Q(user=obj.user, friend=user),
             Q(status="pending") | Q(status="accepted") | Q(status="rejected"),
         )
 

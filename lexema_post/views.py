@@ -194,7 +194,9 @@ class PostViewSet(viewsets.ModelViewSet):
     def _handle_images(images_data, post):
         """Создание новых изображений"""
         for image_data in images_data:
-            PostImage.objects.create(post=post, image=image_data)
+            PostImage.objects.create(
+                post=post, image=image_data, uploaded_by=post.author
+            )
 
     def _handle_images_update(self, post, request):
         """Обновление изображений поста"""

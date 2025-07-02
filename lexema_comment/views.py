@@ -85,5 +85,7 @@ class CommentViewSet(viewsets.ModelViewSet):
     @staticmethod
     def create_image(images_data, comment):
         for image_data in images_data:
-            CommentImages.objects.create(comment=comment, image=image_data)
+            CommentImages.objects.create(
+                comment=comment, image=image_data, uploaded_by=comment.author
+            )
         return Response(status=status.HTTP_201_CREATED)
